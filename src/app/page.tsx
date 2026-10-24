@@ -1,69 +1,209 @@
-import Image from "next/image";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { Navbar } from "@/components/travel/Navbar";
+import { HeroSection } from "@/components/travel/HeroSection";
+import { DestinationsCatalog } from "@/components/travel/DestinationsCatalog";
+import { WhyLuminaSection } from "@/components/travel/WhyLuminaSection";
+import { TripCalculator } from "@/components/travel/TripCalculator";
+import { TestimonialsSection } from "@/components/travel/TestimonialsSection";
+import { Footer } from "@/components/travel/Footer";
+import { JourneyItineraryModal } from "@/components/travel/JourneyItineraryModal";
+import { WishlistDrawer } from "@/components/travel/WishlistDrawer";
+import { ConsultationModal } from "@/components/travel/ConsultationModal";
+import { DESTINATIONS_DATA, Destination } from "@/data/destinations";
+import { IconHeartFilled, IconCheck } from "@tabler/icons-react";
 
 export default function Home() {
+  const [wishlist, setWishlist] = useState<string[]>(["amalfi-coast", "kyoto-zen"]);
+  const [currentCurrency, setCurrentCurrency] = useState("USD");
+  const [selectedItinerary, setSelectedItinerary] = useState<Destination | null>(null);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [bookingPrefillTrip, setBookingPrefillTrip] = useState("");
+  const [heroSearchFilter, setHeroSearchFilter] = useState({
+    destination: "",
+    category: "",
+    guests: "",
+  });
+
+  // Client hydration for saved preferences
+  useEffect(() => {
+    try {
+      const savedWishlist = localStorage.getItem("lumina_wishlist");
+      const savedCurrency = localStorage.getItem("lumina_currency");
+      if (savedWishlist || savedCurrency) {
+        requestAnimationFrame(() => {
+          if (savedWishlist) {
+            setWishlist(JSON.parse(savedWishlist));
+          }
+          if (savedCurrency) {
+            setCurrentCurrency(savedCurrency);
+          }
+        });
+      }
+    } catch {
+      // Ignore storage access errors
+    }
+  }, []);
+
+  // Save changes to localStorage
+  const updateCurrency = (code: string) => {
+    setCurrentCurrency(code);
+    try {
+      localStorage.setItem("lumina_currency", code);
+    } catch {
+      // Ignore
+    }
+  };
+
+  // Toast feedback state
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3200);
+  };
+
+  const handleToggleWishlist = (id: string) => {
+    const dest = DESTINATIONS_DATA.find((d) => d.id === id);
+    const title = dest ? dest.title : "Journey";
+
+    setWishlist((prev) => {
+      let updated: string[];
+      if (prev.includes(id)) {
+        showToast(`Removed "${title}" from your wishlist`);
+        updated = prev.filter((item) => item !== id);
+      } else {
+        showToast(`Saved "${title}" to your wishlist`);
+        updated = [...prev, id];
+      }
+      try {
+        localStorage.setItem("lumina_wishlist", JSON.stringify(updated));
+      } catch {
+        // Ignore
+      }
+      return updated;
+    });
+  };
+
+  const handleOpenBooking = (prefill?: string) => {
+    setBookingPrefillTrip(prefill || "");
+    setIsBookingOpen(true);
+  };
+
+  const handleHeroSearch = (filters: { destination: string; category: string; guests: string }) => {
+    setHeroSearchFilter(filters);
+    const destElem = document.getElementById("destinations");
+    if (destElem) {
+      destElem.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const scrollToDestinations = () => {
+    const destElem = document.getElementById("destinations");
+    if (destElem) {
+      destElem.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-200">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-stone-900/95 border border-amber-500/40 text-stone-100 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-md flex items-center gap-3 animate-in slide-in-from-bottom-3 duration-200">
+          <div className="size-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <IconCheck className="size-3.5 stroke-[2.5]" />
+          </div>
+          <span className="text-xs font-medium">{toastMessage}</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      )}
+
+      {/* Main Luxury Navigation */}
+      <Navbar
+        wishlistCount={wishlist.length}
+        onOpenWishlist={() => setIsWishlistOpen(true)}
+        onOpenBooking={handleOpenBooking}
+        currentCurrency={currentCurrency}
+        onCurrencyChange={updateCurrency}
+      />
+
+      {/* Hero Section */}
+      <HeroSection
+        onSearch={handleHeroSearch}
+        onExploreClick={scrollToDestinations}
+      />
+
+      {/* Featured Expeditions Catalog */}
+      <DestinationsCatalog
+        destinations={DESTINATIONS_DATA}
+        wishlist={wishlist}
+        onToggleWishlist={handleToggleWishlist}
+        onSelectItinerary={setSelectedItinerary}
+        onOpenBooking={handleOpenBooking}
+        currentCurrency={currentCurrency}
+        initialSearchQuery={heroSearchFilter.destination}
+        initialCategory={heroSearchFilter.category}
+      />
+
+      {/* The Lumina Standard / Service Pillars */}
+      <WhyLuminaSection />
+
+      {/* Interactive Bespoke Journey Planner & Calculator */}
+      <TripCalculator
+        currentCurrency={currentCurrency}
+        onOpenBookingWithCustom={(summary) => handleOpenBooking(summary)}
+      />
+
+      {/* Traveler Stories & Accolades */}
+      <TestimonialsSection />
+
+      {/* Footer */}
+      <Footer />
+
+      {/* Detailed Itinerary Modal */}
+      <JourneyItineraryModal
+        destination={selectedItinerary}
+        onClose={() => setSelectedItinerary(null)}
+        isWishlisted={selectedItinerary ? wishlist.includes(selectedItinerary.id) : false}
+        onToggleWishlist={handleToggleWishlist}
+        onOpenBooking={handleOpenBooking}
+        currentCurrency={currentCurrency}
+      />
+
+      {/* Saved Journeys Slide-over Drawer */}
+      <WishlistDrawer
+        isOpen={isWishlistOpen}
+        onClose={() => setIsWishlistOpen(false)}
+        wishlistIds={wishlist}
+        onRemoveItem={handleToggleWishlist}
+        onSelectItinerary={setSelectedItinerary}
+        onOpenBookingWithWishlist={(list) => handleOpenBooking(list)}
+        currentCurrency={currentCurrency}
+      />
+
+      {/* Private Consultation & Booking Modal */}
+      <ConsultationModal
+        isOpen={isBookingOpen}
+        onClose={() => setIsBookingOpen(false)}
+        prefillTrip={bookingPrefillTrip}
+      />
+
+      {/* Floating Wishlist Pill (Mobile & Quick Access) */}
+      {wishlist.length > 0 && !isWishlistOpen && (
+        <button
+          onClick={() => setIsWishlistOpen(true)}
+          className="fixed bottom-6 left-6 z-40 bg-stone-900/90 hover:bg-stone-800 text-stone-100 border border-amber-500/40 px-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2.5 text-xs font-semibold cursor-pointer hover:scale-105 active:scale-95 transition-all"
+        >
+          <IconHeartFilled className="size-4 text-rose-500" />
+          <span>{wishlist.length} Saved {wishlist.length === 1 ? "Trip" : "Trips"}</span>
+          <span className="text-[10px] text-amber-400 uppercase tracking-wider font-bold">
+            Review
+          </span>
+        </button>
+      )}
     </div>
   );
 }
